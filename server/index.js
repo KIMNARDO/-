@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? false
-    : ['http://localhost:5173', 'http://localhost:3000'],
+    : true,
   credentials: true
 }));
 app.use(express.json());
@@ -35,6 +35,6 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`🏀 JR 게이토스 서버 실행 중: http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🏀 JR 게이토스 서버 실행 중: http://0.0.0.0:${PORT}`);
 });
