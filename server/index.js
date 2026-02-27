@@ -27,11 +27,13 @@ app.use('/api/team', require('./routes/team'));
 app.use('/api/join', require('./routes/join'));
 app.use('/api/posts', require('./routes/posts'));
 
-// 프로덕션: React 빌드 서빙
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
+// React 빌드 서빙 (빌드 파일이 있으면 항상 서빙)
+const distPath = path.join(__dirname, '..', 'client', 'dist');
+const fs = require('fs');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
+    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
