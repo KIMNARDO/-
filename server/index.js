@@ -8,9 +8,7 @@ const PORT = process.env.PORT || 3001;
 
 // 미들웨어
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? false
-    : true,
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -27,16 +25,24 @@ app.use('/api/team', require('./routes/team'));
 app.use('/api/join', require('./routes/join'));
 app.use('/api/posts', require('./routes/posts'));
 
-// React 빌드 서빙 (빌드 파일이 있으면 항상 서빙)
-const distPath = path.join(__dirname, '..', 'client', 'dist');
-const fs = require('fs');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
+// 로컬 실행 시 React 빌드 서빙
+if (!process.env.VERCEL) {
+  const distPath = path.join(__dirname, '..', 'client', 'dist');
+  const fs = require('fs');
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🏀 JR 게이토스 서버 실행 중: http://0.0.0.0:${PORT}`);
-});
+// Vercel 서버리스 함수로 export
+module.exports = app;
+
+// 로컬에서 직접 실행할 때만 listen
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🏀 JR 게이토스 서버 실행 중: http://0.0.0.0:${PORT}`);
+  });
+}

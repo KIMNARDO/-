@@ -2,12 +2,17 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'jr-gators.db');
+// Vercel 서버리스는 /tmp 만 쓰기 가능
+const DB_PATH = process.env.VERCEL
+  ? '/tmp/jr-gators.db'
+  : path.join(__dirname, '..', 'data', 'jr-gators.db');
 
-// data 폴더 생성
-const dataDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+// 로컬 전용: data 폴더 생성
+if (!process.env.VERCEL) {
+  const dataDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
 }
 
 const db = new Database(DB_PATH);
