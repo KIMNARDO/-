@@ -1,38 +1,40 @@
 {
-    "version": 2,
-    "builds": [
-          {
-                  "src": "server/index.js",
-                  "use": "@vercel/node"
-          },
-          {
-                  "src": "client/package.json",
-                  "use": "@vercel/static-build",
-                  "config": {
-                            "distDir": "dist"
-                  }
-          }
-    ],
-    "routes": [
-          {
-                  "src": "/api/(.*)",
-                  "dest": "/server/index.js"
-          },
-          {
-                  "src": "/auth/(.*)",
-                  "dest": "/server/index.js"
-          },
-          {
-                  "src": "/assets/(.*)",
-                  "dest": "/client/assets/$1"
-          },
-          {
-                  "src": "/logo.svg",
-                  "dest": "/client/logo.svg"
-          },
-          {
-                  "src": "/(.*)",
-                  "dest": "/client/index.html"
-          }
-    ]
+      "version": 2,
+      "builds": [
+              {
+                        "src": "server/index.js",
+                        "use": "@vercel/node"
+              },
+              {
+                        "src": "client/package.json",
+                        "use": "@vercel/static-build",
+                        "config": { "distDir": "dist" }
+              }
+      ],
+      "routes": [
+              {
+                        "src": "/api/(.*)",
+                        "dest": "/server/index.js"
+              },
+              {
+                        "src": "/auth/kakao/callback",
+                        "dest": "/client/index.html"
+              },
+              {
+                        "src": "/auth/(.*)",
+                        "dest": "/server/index.js"
+              },
+              {
+                        "src": "/assets/(.*)",
+                        "dest": "/client/assets/$1"
+              },
+              {
+                        "src": "/logo.svg",
+                        "dest": "/client/logo.svg"
+              },
+              {
+                        "src": "/(.*)",
+                        "dest": "/client/index.html"
+              }
+      ]
 }
