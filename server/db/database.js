@@ -2,18 +2,24 @@ const { createClient } = require('@libsql/client');
 const path = require('path');
 const fs = require('fs');
 
-// Vercel 환경에서는 TURSO_URL과 TURSO_AUTH_TOKEN이 필수
-// 로컬 환경을 위해 file: 기반의 Fallback 마련 (필요시)
-const dbUrl = process.env.TURSO_DATABASE_URL || 'file:' + path.join(__dirname, '..', 'data', 'jr-gators.db');
+const isVercel = process.env.VERCEL;
+let dbUrl = process.env.TURSO_DATABASE_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN || undefined;
 
-// 로컬 환경 시 data 폴더 생성
-if (dbUrl.startsWith('file:')) {
-  const dataDir = path.join(__dirname, '..', 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+
+if (!dbUrl) {
+  if (isVercel) {
+    dbUrl = 'file:/tmp/jr-gators.db';
+  } else {
+    // 로컬 환경 시 data 폴더 생성
+    const dataDir = path.join(__dirname, '..', 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    dbUrl = 'file:' + path.join(dataDir, 'jr-gators.db');
   }
 }
+
 
 const db = createClient({
   url: dbUrl,
