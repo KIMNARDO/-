@@ -35,16 +35,29 @@ router.post('/kakao/callback', async (req, res) => {
       member = db.prepare('SELECT * FROM members WHERE id = ?').get(member.id);
     }
 
-    // 회원이 아닌 경우 - 가입 신청 여부 확인
+    // 회원이 아닌 경우
     if (!member) {
-      const existingRequest = db.prepare('SELECT * FROM join_requests WHERE kakao_id = ? AND status = ?').get(kakaoId, 'pending');
-      return res.json({
-        isNewUser: true,
-        hasPendingRequest: !!existingRequest,
-        kakaoId,
-        nickname,
-        profileImage
-      });
+      // 첫 번째 사용자는 자동으로 관리자로 등록 (부트스트랩)
+      const memberCount = db.prepare('SELECT COUNT(*) as count FROM members').get().count;
+
+      if (memberCount === 0) {
+        const stmt = db.prepare(
+          'INSERT INTO members (kakao_id, name, nickname, profile_image, role) VALUES (?, ?, ?, ?, ?)'
+        );
+        const result = stmt.run(kakaoId, nickname || '관리자', nickname, profileImage, 'admin');
+        member = db.prepare('SELECT * FROM members WHERE id = ?').get(result.lastInsertRowid);
+        // 아래 토큰 발급 로직으로 진행
+      } else {
+        // 가입 신청 여부 확인
+        const existingRequest = db.prepare('SELECT * FROM join_requests WHERE kakao_id = ? AND status = ?').get(kakaoId, 'pending');
+        return res.json({
+          isNewUser: true,
+          hasPendingRequest: !!existingRequest,
+          kakaoId,
+          nickname,
+          profileImage
+        });
+      }
     }
 
     // pending 상태 (승인 대기) 회원
@@ -77,8 +90,9 @@ router.post('/kakao/callback', async (req, res) => {
 });
 
 // 개발용 로그인 (카카오 API 키 없을 때)
+// ALLOW_DEV_LOGIN=true 환경변수로 프로덕션에서도 활성화 가능
 router.post('/dev-login', (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_LOGIN !== 'true') {
     return res.status(404).json({ error: 'Not found' });
   }
 
