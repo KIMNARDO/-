@@ -78,9 +78,6 @@ router.post('/kakao/callback', async (req, res) => {
 
 // 개발용 로그인 (카카오 API 키 없을 때)
 router.post('/dev-login', (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ error: 'Not found' });
-  }
 
   const { name, role } = req.body;
   const devKakaoId = `dev_${Date.now()}`;
