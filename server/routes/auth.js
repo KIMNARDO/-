@@ -26,18 +26,26 @@ router.post('/kakao/callback', async (req, res) => {
     const profileImage = userInfo.kakao_account?.profile?.profile_image_url || '';
 
     // 기존 회원 확인
-    let member = db.prepare('SELECT * FROM members WHERE kakao_id = ?').get(kakaoId);
+    let result = await db.execute({ sql: 'SELECT * FROM members WHERE kakao_id = ?', args: [kakaoId] });
+    let member = result.rows[0];
 
     if (member) {
       // 프로필 이미지 업데이트
-      db.prepare('UPDATE members SET profile_image = ?, nickname = ? WHERE id = ?')
-        .run(profileImage, nickname || member.nickname, member.id);
-      member = db.prepare('SELECT * FROM members WHERE id = ?').get(member.id);
+      await db.execute({
+        sql: 'UPDATE members SET profile_image = ?, nickname = ? WHERE id = ?',
+        args: [profileImage, nickname || member.nickname, member.id]
+      });
+      result = await db.execute({ sql: 'SELECT * FROM members WHERE id = ?', args: [member.id] });
+      member = result.rows[0];
     }
 
     // 회원이 아닌 경우 - 가입 신청 여부 확인
     if (!member) {
-      const existingRequest = db.prepare('SELECT * FROM join_requests WHERE kakao_id = ? AND status = ?').get(kakaoId, 'pending');
+      const existingRequestResult = await db.execute({
+        sql: 'SELECT * FROM join_requests WHERE kakao_id = ? AND status = ?',
+        args: [kakaoId, 'pending']
+      });
+      const existingRequest = existingRequestResult.rows[0];
       return res.json({
         isNewUser: true,
         hasPendingRequest: !!existingRequest,
@@ -77,35 +85,47 @@ router.post('/kakao/callback', async (req, res) => {
 });
 
 // 개발용 로그인 (카카오 API 키 없을 때)
-router.post('/dev-login', (req, res) => {
+router.post('/dev-login', async (req, res) => {
+  try {
+    const { name, role } = req.body;
+    const devKakaoId = `dev_${Date.now()}`;
 
-  const { name, role } = req.body;
-  const devKakaoId = `dev_${Date.now()}`;
+    // 기존 개발용 계정 확인
+    let result = await db.execute({
+      sql: 'SELECT * FROM members WHERE name = ? AND kakao_id LIKE ?',
+      args: [name, 'dev_%']
+    });
+    let member = result.rows[0];
 
-  // 기존 개발용 계정 확인
-  let member = db.prepare('SELECT * FROM members WHERE name = ? AND kakao_id LIKE ?').get(name, 'dev_%');
-
-  if (!member) {
-    const stmt = db.prepare(
-      'INSERT INTO members (kakao_id, name, nickname, role) VALUES (?, ?, ?, ?)'
-    );
-    const result = stmt.run(devKakaoId, name || '테스트 사용자', name || '테스트', role || 'admin');
-    member = db.prepare('SELECT * FROM members WHERE id = ?').get(result.lastInsertRowid);
-  }
-
-  const token = generateToken(member);
-  res.json({
-    token,
-    member: {
-      id: member.id,
-      name: member.name,
-      nickname: member.nickname,
-      role: member.role,
-      profile_image: member.profile_image,
-      position: member.position,
-      jersey_number: member.jersey_number
+    if (!member) {
+      const insert = await db.execute({
+        sql: 'INSERT INTO members (kakao_id, name, nickname, role) VALUES (?, ?, ?, ?)',
+        args: [devKakaoId, name || '테스트 사용자', name || '테스트', role || 'admin']
+      });
+      result = await db.execute({
+        sql: 'SELECT * FROM members WHERE id = ?',
+        args: [Number(insert.lastInsertRowid)]
+      });
+      member = result.rows[0];
     }
-  });
+
+    const token = generateToken(member);
+    res.json({
+      token,
+      member: {
+        id: member.id,
+        name: member.name,
+        nickname: member.nickname,
+        role: member.role,
+        profile_image: member.profile_image,
+        position: member.position,
+        jersey_number: member.jersey_number
+      }
+    });
+  } catch (err) {
+    console.error('dev-login error:', err);
+    res.status(500).json({ error: '로그인 실패' });
+  }
 });
 
 // 현재 사용자 정보

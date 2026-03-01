@@ -13,7 +13,7 @@ function generateToken(member) {
 }
 
 // 인증 미들웨어
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: '로그인이 필요합니다' });
@@ -22,7 +22,11 @@ function authenticate(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const member = db.prepare('SELECT * FROM members WHERE id = ? AND is_active = 1').get(decoded.id);
+    const result = await db.execute({
+      sql: 'SELECT * FROM members WHERE id = ? AND is_active = 1',
+      args: [decoded.id]
+    });
+    const member = result.rows[0];
     if (!member) {
       return res.status(401).json({ error: '유효하지 않은 사용자입니다' });
     }
@@ -42,7 +46,7 @@ function requireAdmin(req, res, next) {
 }
 
 // 선택적 인증 (로그인 안 해도 접근 가능하지만, 로그인 시 사용자 정보 제공)
-function optionalAuth(req, res, next) {
+async function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     req.user = null;
@@ -52,7 +56,11 @@ function optionalAuth(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const member = db.prepare('SELECT * FROM members WHERE id = ? AND is_active = 1').get(decoded.id);
+    const result = await db.execute({
+      sql: 'SELECT * FROM members WHERE id = ? AND is_active = 1',
+      args: [decoded.id]
+    });
+    const member = result.rows[0];
     req.user = member || null;
   } catch {
     req.user = null;
